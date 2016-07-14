@@ -17,11 +17,13 @@ First add this repo to your composer.json in ProcessWire:
 }
 ```
 
-Then run the following to install the module and it's dependency:
+Then run the following to download the module and it's dependency:
 
 ```bash
 composer require lostkobrakai/fieldtype-country-select
 ```
+
+Install the module as always via the backend.
 
 ## Requirements
 

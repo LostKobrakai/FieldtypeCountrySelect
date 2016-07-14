@@ -1,0 +1,13 @@
+{
+    "title": "Country Select",
+    "version": "0.0.1",
+    "summary": "",
+    "author": "",
+    "href": "",
+    "requires": [
+        "ProcessWire>=3.0.10"
+    ],
+    "installs": [
+        "InputfieldCountrySelect"
+    ]
+}

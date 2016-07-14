@@ -1,0 +1,20 @@
+{
+  "name": "lostkobrakai/fieldtype-country-select",
+  "type": "pw-module",
+  "description": "A fieldtype that let's you store countries from a list maintained by the league/iso3166 package.",
+  "keywords": [ "iso", "iso3166", "iso 3166", "processwire", "fieldtype" ],
+  "homepage": "https://kobrakai.com",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Benjamin Milde",
+      "email": "benni@kobrakai.de",
+      "homepage": "https://kobrakai.com",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "hari/pw-module": "~1.0",
+    "league/iso3166": "^1.0.1"
+  }
+}

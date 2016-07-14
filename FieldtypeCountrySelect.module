@@ -1,30 +1,181 @@
 <?php
-class FieldtypeCountrySelect extends FieldtypeText {
 
-	public function init() {
-		// $this->addStyle("custom.css");
-		// $this->addScript("custom.js");
-		// $this->addHookAfter("class::function", $this, "yourFunction");
+/**
+ * 
+ */
+class FieldtypeCountrySelect extends Fieldtype {
+
+	protected $iso = null;
+
+	/**
+	 * Lazy instantiation
+	 *
+	 * @see FieldtypeCountrySelect::___customizeCountries()
+	 */
+	public function iso()
+	{
+		if(is_null($this->iso)){
+			$this->iso = new League\ISO3166\ISO3166(
+				$this->customizeCountries()
+			);
+		}
+
+		return $this->iso;
 	}
 
+	/**
+	 * Hook to allow the addition or modification of the ISO3166 Countries.
+	 * If used the returned array will REPLACE the one of ISO3166.
+	 *
+	 * @see FieldtypeCountrySelect::iso()
+	 */
+	public function ___customizeCountries()
+	{
+		return [];
+	}
+
+	/**
+	 * Check if the value is a valid alpha2 key. If not return blank.
+	 *
+	 * @param Page  $page
+	 * @param Field $field
+	 * @param       $value
+	 * @return string
+	 */
 	public function sanitizeValue(Page $page, Field $field, $value) {
-		
+		// Check limit setting
+		if($this->isLimited($field) && !in_array($value, $field->allowedCountries))
+			return $this->getBlankValue($page, $field);
+
+		// Check ISO3166 class
+		try{
+			$this->iso()->getByAlpha2($value);
+		} catch(OutOfBoundsException $e) {
+			return $this->getBlankValue($page, $field);
+		}
+
+		return $value;
 	}
 
-	public function ___wakeupValue(Page $page, Field $field, $value) {
-		
-	}
-
+	/**
+	 * Return an array with all the ISO3166 values of a country
+	 *
+	 * @param Page  $page
+	 * @param Field $field
+	 * @param       $value
+	 * @return array
+	 */
 	public function ___formatValue(Page $page, Field $field, $value) {
-		
+		$value = (string) $value; 
+		return $this->iso()->getByAlpha2($value); 
 	}
 
+	/**
+	 * Return all Fieldtypes derived from FieldtypeText, which we will consider compatible
+	 *
+	 * @param Field $field
+	 * @return Fieldtypes
+	 */
+	public function ___getCompatibleFieldtypes(Field $field) {
+		$fieldtypes = $this->wire(new Fieldtypes());
+		foreach($this->wire('fieldtypes') as $fieldtype) {
+			if($fieldtype instanceof FieldtypeCountrySelect){
+				$fieldtypes->add($fieldtype);
+			}else if($fieldtype instanceof FieldtypeText) {
+				$fieldtypes->add($fieldtype);
+			} else {
+				$className = $fieldtype->className();
+				if($className == 'FieldtypeSelector') $fieldtypes->add($fieldtype);
+			}
+		}
+		return $fieldtypes; 
+	}
+
+	/**
+	 * Return whether the given value is considered empty or not
+	 *
+	 * @param Field $field
+	 * @param mixed $value
+	 * @return bool
+	 */
+	public function isEmptyValue(Field $field, $value) {
+		return !strlen($value); 
+	}
+
+	/**
+	 * Return if the list of countries is limited
+	 *
+	 * @param Field $field
+	 * @return bool
+	 */
+	protected function isLimited (Field $field)
+	{
+		return is_array($field->allowedCountries) && count($field->allowedCountries);
+	}
+
+	/**
+	 * Return the associated Inputfield
+	 *
+	 * @param Page  $page
+	 * @param Field $field
+	 * @return InputfieldSelector
+	 */
 	public function getInputfield(Page $page, Field $field) {
-		
+		$inputfield = $this->wire('modules')->get("InputfieldSelect"); 
+		$inputfield->class = $this->className();
+		$limited = $this->isLimited($field);
+
+		foreach ($this->iso() as $key => $country) {
+			if($limited && !in_array($country['alpha2'], $field->allowedCountries)) continue;
+			$inputfield->addOption($country['alpha2'], $country['name']);
+		}
+
+		return $inputfield;
 	}
 
+	/**
+	 * Update a query to match the text with a fulltext index
+	 *
+	 */
+	public function getMatchQuery($query, $table, $subfield, $operator, $value) {
+		$ft = $this->wire(new DatabaseQuerySelectFulltext($query)); 
+		$ft->match($table, $subfield, $operator, $value); 
+		return $query; 
+	}
+
+	/**
+	 * Return the database schema in specified format
+	 *
+	 */
 	public function getDatabaseSchema(Field $field) {
-		
+		$schema = parent::getDatabaseSchema($field); 
+		$schema['data'] = 'text NOT NULL';
+		$schema['keys']['data_exact'] = 'KEY `data_exact` (`data`(250))'; 
+		$schema['keys']['data'] = 'FULLTEXT KEY `data` (`data`)'; 
+		return $schema;
+	}
+
+	/**
+	 * Allow limiting the available countries on a per field basis
+	 *
+	 * @param Field $field
+	 * @return InputfieldWrapper
+	 */
+	public function ___getConfigInputfields(Field $field) {
+		$inputfields = parent::___getConfigInputfields($field);
+
+		$inputfield = $this->wire('modules')->get("InputfieldAsmSelect"); 
+		$inputfield->attr('name', 'allowedCountries');
+		foreach ($this->wire('modules')->get('FieldtypeCountrySelect')->iso() as $country) {
+			$inputfield->addOption($country['alpha2'], $country['name']);
+		}
+		$inputfield->setAttribute('value', is_array($field->allowedCountries) ? $field->allowedCountries : array());
+		$inputfield->label = $this->_('Allowed countries');
+		$inputfield->description = $this->_('Allow only certain countries to be selected.');
+
+		$inputfields->add($inputfield);
+
+		return $inputfields; 
 	}
 
 }

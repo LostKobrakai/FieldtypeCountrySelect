@@ -1,13 +1,10 @@
 {
     "title": "Country Select",
     "version": "0.0.1",
-    "summary": "",
-    "author": "",
-    "href": "",
+    "summary": "A fieldtype that let's you store countries from a list maintained by the league/iso3166 package.",
+    "author": "Benjamin Milde",
     "requires": [
-        "ProcessWire>=3.0.10"
-    ],
-    "installs": [
-        "InputfieldCountrySelect"
+        "PHP>=5.5",
+        "ProcessWire>=2.8.10"
     ]
 }
